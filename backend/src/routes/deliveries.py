@@ -5,7 +5,7 @@ from src.controllers.auth import current,admin
 from src.models.run import Schedule,Delivery
 from src.schemas.requests import ScheduleInput
 from src.services.delivery import add_schedule
-from src.services.export import csv_text
+from src.services.export import csv_text,declaration_csv
 from src.utils.serialize import row
 router=APIRouter()
 @router.get('/schedules')
@@ -24,3 +24,10 @@ def download(id:int,db=Depends(database),u=Depends(current)):
  obj=db.get(Delivery,id)
  if not obj: raise HTTPException(404,'交付不存在')
  return Response(csv_text(obj.payload['result']),media_type='text/csv',headers={'Content-Disposition':f'attachment; filename="delivery-{id}.csv"'})
+@router.get('/deliveries/{id}/declaration-csv')
+def declaration_download(id:int,db=Depends(database),u=Depends(current)):
+ obj=db.get(Delivery,id)
+ if not obj: raise HTTPException(404,'交付不存在')
+ decl=obj.payload.get('declaration')
+ if not decl: raise HTTPException(409,'该交付生成于申报表生效前，原件不含生效表，已保留不变')
+ return Response(declaration_csv(decl['result']),media_type='text/csv',headers={'Content-Disposition':f'attachment; filename="delivery-{id}-declaration.csv"'})
